@@ -50,6 +50,7 @@ function Deps (opts) {
     
     this.transforms = [].concat(opts.transform).filter(Boolean);
     this.globalTransforms = [].concat(opts.globalTransform).filter(Boolean);
+    this.depTransforms = {};
     this.resolver = opts.resolve || browserResolve;
     this.options = xtend(opts);
     if (!this.options.modules) this.options.modules = {};
@@ -219,6 +220,7 @@ Deps.prototype.getTransforms = function (file, pkg, opts) {
     var transforms = [].concat(isTopLevel ? this.transforms : [])
         .concat(getTransforms(pkg, {
             globalTransform: this.globalTransforms,
+            depTransform: depTransform(this.depTransforms, pkg),
             transformKey: this.options.transformKey
         }))
     ;
@@ -299,6 +301,38 @@ Deps.prototype.getTransforms = function (file, pkg, opts) {
             self.emit('transform', trs, file);
             cb(null, trs);
         });
+    }
+    
+    function depTransform (deps, pkg) {
+        var dtrx = false;
+        if (pkg) {
+            if (deps.hasOwnProperty(pkg.name)) {
+                // our transforms have been overridden (or been seen already)
+                dtrx = deps[pkg.name];
+                if (dtrx) {
+                    console.log("overriden: " + pkg.name);
+                    console.log(depTransform);
+                }
+            } else {
+                // no preceding pkg has overridden us, so block any subsequent
+                // one from doing so
+                console.log("no overrides: " + pkg.name);
+                deps[pkg.name] = false;
+            }
+            if (pkg.browserify && pkg.browserify.dependencies) {
+                // if any overrides specified for by this package, record them
+                // (if either not seen or not previously recorded)
+                var overrides = pkg.browserify.dependencies;
+                for (var dep in overrides) {
+                    if (overrides.hasOwnProperty(dep) && !deps.hasOwnProperty(dep)) {
+                        console.log("override: " + dep + " (by " + pkg.name + ")");
+                        console.log(overrides[dep].transform);
+                        deps[dep] = overrides[dep].transform;
+                    }
+                }
+            }
+        }
+        return dtrx;
     }
 };
 
@@ -520,7 +554,9 @@ Deps.prototype.lookupPackage = function (file, cb) {
  
 function getTransforms (pkg, opts) {
     var trx = [];
-    if (opts.transformKey) {
+    if (opts.depTransform) {
+        trx = opts.depTransform
+    } else if (opts.transformKey) {
         var n = pkg;
         var keys = opts.transformKey;
         for (var i = 0; i < keys.length; i++) {
