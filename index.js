@@ -309,14 +309,9 @@ Deps.prototype.getTransforms = function (file, pkg, opts) {
             if (deps.hasOwnProperty(pkg.name)) {
                 // our transforms have been overridden (or been seen already)
                 dtrx = deps[pkg.name];
-                if (dtrx) {
-                    console.log("overriden: " + pkg.name);
-                    console.log(depTransform);
-                }
             } else {
                 // no preceding pkg has overridden us, so block any subsequent
                 // one from doing so
-                console.log("no overrides: " + pkg.name);
                 deps[pkg.name] = false;
             }
             if (pkg.browserify && pkg.browserify.dependencies) {
@@ -325,8 +320,6 @@ Deps.prototype.getTransforms = function (file, pkg, opts) {
                 var overrides = pkg.browserify.dependencies;
                 for (var dep in overrides) {
                     if (overrides.hasOwnProperty(dep) && !deps.hasOwnProperty(dep)) {
-                        console.log("override: " + dep + " (by " + pkg.name + ")");
-                        console.log(overrides[dep].transform);
                         deps[dep] = overrides[dep].transform;
                     }
                 }
